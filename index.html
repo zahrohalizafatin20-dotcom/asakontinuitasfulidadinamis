@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulasi & LKPD Interaktif Fluida Dinamis: Asas Kontinuitas</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .glass-panel { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 h-full flex flex-col overflow-hidden">
+
+    <header class="bg-slate-800 border-b border-slate-700 px-6 py-3 flex items-center justify-between shrink-0 shadow-md">
+        <div class="flex items-center space-x-3">
+            <div class="bg-blue-600 p-2 rounded-xl text-white shadow-lg shadow-blue-500/30">
+                <i class="fa-solid fa-water text-xl"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg text-white">FluidaLab Pro: Asas Kontinuitas</h1>
+                <p class="text-xs text-slate-400">Simulasi Virtual & LKPD Interaktif Fisika SMA/Universitas</p>
+            </div>
+        </div>
+        <nav class="flex space-x-2 bg-slate-900 p-1 rounded-xl border border-slate-700">
+            <button onclick="switchTab('simulasi')" id="btn-simulasi" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all bg-blue-600 text-white shadow">
+                <i class="fa-solid fa-flask mr-1.5"></i> Simulasi
+            </button>
+            <button onclick="switchTab('lkpd')" id="btn-lkpd" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white">
+                <i class="fa-solid fa-book-open mr-1.5"></i> LKPD Interaktif
+            </button>
+            <button onclick="switchTab('kuis')" id="btn-kuis" class="px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white">
+                <i class="fa-solid fa-brain mr-1.5"></i> Kuis & Evaluasi
+            </button>
+        </nav>
+    </header>
+
+    <main class="flex-1 overflow-y-auto p-4 md:p-6 bg-slate-950">
+        
+        <!-- ================= TAB 1: SIMULASI ================= -->
+        <div id="tab-simulasi" class="space-y-6 max-w-7xl mx-auto">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                
+                <!-- Canvas & Visualizer Panel -->
+                <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col shadow-xl">
+                    <div class="flex justify-between items-center mb-4">
+                        <h2 class="font-bold text-base text-slate-200 flex items-center">
+                            <i class="fa-solid fa-display text-blue-400 mr-2"></i> Visualisasi Aliran Pipa Menyempit
+                        </h2>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="toggleSimulation()" id="playBtn" class="bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center shadow transition">
+                                <i class="fa-solid fa-play mr-1.5"></i> <span id="playText">Mulai</span>
+                            </button>
+                            <button onclick="resetSimulation()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center border border-slate-700 transition">
+                                <i class="fa-solid fa-rotate-right mr-1"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Canvas Container -->
+                    <div class="relative flex-1 bg-slate-950 rounded-xl overflow-hidden border border-slate-800 min-h-[300px] flex items-center justify-center">
+                        <canvas id="simCanvas" class="w-full h-full block"></canvas>
+                        <!-- Overlay badges -->
+                        <div class="absolute top-3 left-3 bg-slate-900/80 backdrop-blur border border-slate-700/60 px-3 py-1.5 rounded-lg text-xs">
+                            <span class="text-blue-400 font-semibold">Pipa 1:</span> $A_1$ &amp; $v_1$
+                        </div>
+                        <div class="absolute top-3 right-3 bg-slate-900/80 backdrop-blur border border-slate-700/60 px-3 py-1.5 rounded-lg text-xs">
+                            <span class="text-emerald-400 font-semibold">Pipa 2:</span> $A_2$ &amp; $v_2$
+                        </div>
+                    </div>
+
+                    <!-- Live Telemetry / Readings -->
+                    <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                        <div class="bg-slate-950/60 border border-slate-800 p-3 rounded-xl">
+                            <div class="text-slate-400 text-xs">Debit Aliran ($Q$)</div>
+                            <div id="readQ" class="text-lg font-bold text-blue-400 mt-0.5">0.00 <span class="text-xs font-normal">m³/s</span></div>
+                        </div>
+                        <div class="bg-slate-950/60 border border-slate-800 p-3 rounded-xl">
+                            <div class="text-slate-400 text-xs">Kecepatan Pipa 2 ($v_2$)</div>
+                            <div id="readV2" class="text-lg font-bold text-emerald-400 mt-0.5">0.00 <span class="text-xs font-normal">m/s</span></div>
+                        </div>
+                        <div class="bg-slate-950/60 border border-slate-800 p-3 rounded-xl">
+                            <div class="text-slate-400 text-xs">Rasio Luas ($A_1/A_2$)</div>
+                            <div id="readRasio" class="text-lg font-bold text-amber-400 mt-0.5">1.00</div>
+                        </div>
+                        <div class="bg-slate-950/60 border border-slate-800 p-3 rounded-xl">
+                            <div class="text-slate-400 text-xs">Status Validasi</div>
+                            <div id="readStatus" class="text-xs font-bold text-emerald-400 mt-2 flex items-center">
+                                <i class="fa-solid fa-circle-check mr-1"></i> Kontinuitas Valid ($Q_1 = Q_2$)
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Controls Panel -->
+                <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 flex flex-col justify-between shadow-xl">
+                    <div class="space-y-4">
+                        <h2 class="font-bold text-base text-slate-200 flex items-center border-b border-slate-800 pb-3">
+                            <i class="fa-solid fa-sliders text-emerald-400 mr-2"></i> Parameter Percobaan
+                        </h2>
+
+                        <!-- Diamater Pipa 1 -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs font-medium">
+                                <span class="text-slate-300">Diameter Pipa 1 ($d_1$)</span>
+                                <span id="valD1" class="text-blue-400 font-bold">2.0 m</span>
+                            </div>
+                            <input type="range" id="rangeD1" min="0.5" max="5.0" step="0.1" value="2.0" class="w-full accent-blue-500 bg-slate-950 h-2 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- Kecepatan Aliran Pipa 1 -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs font-medium">
+                                <span class="text-slate-300">Kecepatan Masuk Pipa 1 ($v_1$)</span>
+                                <span id="valV1" class="text-blue-400 font-bold">2.0 m/s</span>
+                            </div>
+                            <input type="range" id="rangeV1" min="0.5" max="10.0" step="0.1" value="2.0" class="w-full accent-blue-500 bg-slate-950 h-2 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- Diameter Pipa 2 -->
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-xs font-medium">
+                                <span class="text-slate-300">Diameter Pipa 2 ($d_2$)</span>
+                                <span id="valD2" class="text-emerald-400 font-bold">1.0 m</span>
+                            </div>
+                            <input type="range" id="rangeD2" min="0.2" max="4.0" step="0.1" value="1.0" class="w-full accent-emerald-500 bg-slate-950 h-2 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- Partikel Zat Cair -->
+                        <div class="space-y-1.5 pt-2 border-t border-slate-800">
+                            <div class="flex justify-between text-xs font-medium">
+                                <span class="text-slate-300">Jumlah Partikel Tracer</span>
+                                <span id="valParticles" class="text-amber-400 font-bold">40</span>
+                            </div>
+                            <input type="range" id="rangeParticles" min="10" max="100" step="10" value="40" class="w-full accent-amber-500 bg-slate-950 h-2 rounded-lg cursor-pointer">
+                        </div>
+
+                        <!-- Teori Ringkas -->
+                        <div class="bg-blue-950/30 border border-blue-900/50 p-3.5 rounded-xl text-xs space-y-1 text-slate-300">
+                            <div class="font-semibold text-blue-400 flex items-center">
+                                <i class="fa-solid fa-lightbulb mr-1.5"></i> Konsep Utama
+                            </div>
+                            <p>Debit fluida yang mengalir pada setiap penampang pipa adalah konstan ($Q_1 = Q_2$). Jika luas penampang mengecil ($A_2 < A_1$), maka kecepatan aliran akan meningkat ($v_2 > v_1$).</p>
+                        </div>
+                    </div>
+
+                    <div class="mt-4 pt-3 border-t border-slate-800 flex justify-between items-center">
+                        <span class="text-xs text-slate-400">Persamaan: $A_1v_1 = A_2v_2$</span>
+                        <button onclick="catatDataLKPD()" class="bg-blue-600 hover:bg-blue-500 text-white text-xs px-3.5 py-2 rounded-lg font-semibold flex items-center shadow transition">
+                            <i class="fa-solid fa-file-arrow-down mr-1.5"></i> Catat ke LKPD
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= TAB 2: LKPD INTERAKTIF ================= -->
+        <div id="tab-lkpd" class="hidden max-w-5xl mx-auto space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+                
+                <!-- Header LKPD -->
+                <div class="border-b border-slate-800 pb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                    <div>
+                        <div class="inline-block bg-blue-500/10 text-blue-400 text-xs font-semibold px-2.5 py-1 rounded-md mb-1">LEMBAR KERJA PESERTA DIDIK DIGITAL</div>
+                        <h2 class="text-xl font-bold text-white">Eksplorasi Asas Kontinuitas Fluida Dinamis</h2>
+                    </div>
+                    <div class="flex items-center space-x-3 w-full md:w-auto">
+                        <input type="text" id="namaSiswa" placeholder="Nama Lengkap Siswa" class="bg-slate-950 border border-slate-700 text-sm px-3 py-2 rounded-xl focus:outline-none focus:border-blue-500 text-white w-full md:w-48">
+                        <input type="text" id="kelasSiswa" placeholder="Kelas / Kelompok" class="bg-slate-950 border border-slate-700 text-sm px-3 py-2 rounded-xl focus:outline-none focus:border-blue-500 text-white w-full md:w-36">
+                    </div>
+                </div>
+
+                <!-- Bagian A: Tujuan & Dasar Teori -->
+                <div class="space-y-3">
+                    <h3 class="font-bold text-sm text-blue-400 flex items-center uppercase tracking-wider">
+                        <i class="fa-solid fa-bullseye mr-2"></i> A. Tujuan Pembelajaran
+                    </h3>
+                    <ul class="list-disc list-inside text-xs text-slate-300 space-y-1 pl-2">
+                        <li>Memahami hubungan antara luas penampang pipa dan kecepatan aliran fluida.</li>
+                        <li>Membuktikan hukum kekekalan massa (Asas Kontinuitas) melalui percobaan virtual.</li>
+                        <li>Menghitung debit fluida pada berbagai variasi ukuran penampang pipa.</li>
+                    </ul>
+                </div>
+
+                <!-- Bagian B: Tabel Data Hasil Pengamatan -->
+                <div class="space-y-3">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-sm text-blue-400 flex items-center uppercase tracking-wider">
+                            <i class="fa-solid fa-table mr-2"></i> B. Tabel Data Pengamatan Virtual
+                        </h3>
+                        <button onclick="clearTabelLKPD()" class="text-xs text-rose-400 hover:text-rose-300 flex items-center">
+                            <i class="fa-solid fa-trash mr-1"></i> Kosongkan Tabel
+                        </button>
+                    </div>
+                    <div class="overflow-x-auto border border-slate-800 rounded-xl">
+                        <table class="w-full text-left border-collapse text-xs">
+                            <thead>
+                                <tr class="bg-slate-950 text-slate-400 border-b border-slate-800">
+                                    <th class="p-3">No</th>
+                                    <th class="p-3">$d_1$ (m)</th>
+                                    <th class="p-3">$v_1$ (m/s)</th>
+                                    <th class="p-3">$d_2$ (m)</th>
+                                    <th class="p-3">$v_2$ Hitung (m/s)</th>
+                                    <th class="p-3">$Q_1$ (m³/s)</th>
+                                    <th class="p-3">$Q_2$ (m³/s)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tabelDataBody" class="divide-y divide-slate-800/60 text-slate-300">
+                                <tr class="text-slate-500 italic">
+                                    <td colspan="7" class="p-4 text-center">Belum ada data dicatat. Silakan gunakan tombol "Catat ke LKPD" di tab Simulasi.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Bagian C: Pertanyaan Diskusi Analisis -->
+                <div class="space-y-4">
+                    <h3 class="font-bold text-sm text-blue-400 flex items-center uppercase tracking-wider">
+                        <i class="fa-solid fa-clipboard-question mr-2"></i> C. Pertanyaan Analisis &amp; Kesimpulan
+                    </h3>
+                    
+                    <div class="space-y-3">
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                            <label class="text-xs font-semibold text-slate-200 block">1. Berdasarkan data eksperimen, apa yang terjadi pada kecepatan aliran fluida ($v_2$) ketika diameter pipa diperkecil ($d_2 < d_1$)? Mengapa hal tersebut dapat terjadi?</label>
+                            <textarea id="ans1" rows="3" placeholder="Tuliskan jawaban analisis Anda di sini..." class="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500"></textarea>
+                        </div>
+
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                            <label class="text-xs font-semibold text-slate-200 block">2. Apakah nilai debit air di Pipa 1 ($Q_1$) selalu sama dengan debit air di Pipa 2 ($Q_2$)? Jelaskan kaitan fenomena ini dengan Hukum Kekekalan Massa!</label>
+                            <textarea id="ans2" rows="3" placeholder="Tuliskan jawaban analisis Anda di sini..." class="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500"></textarea>
+                        </div>
+
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-2">
+                            <label class="text-xs font-semibold text-slate-200 block">3. Kesimpulan umum apa yang dapat Anda tarik mengenai Asas Kontinuitas pada fluida ideal?</label>
+                            <textarea id="ans3" rows="3" placeholder="Tuliskan kesimpulan percobaan Anda di sini..." class="w-full bg-slate-900 border border-slate-700 text-xs p-3 rounded-lg text-slate-200 focus:outline-none focus:border-blue-500"></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Aksi Ekspor Laporan -->
+                <div class="pt-4 border-t border-slate-800 flex justify-end">
+                    <button onclick="exportLaporanLKPD()" class="bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl flex items-center shadow-lg shadow-emerald-600/30 transition">
+                        <i class="fa-solid fa-file-arrow-down mr-2"></i> Ekspor Laporan LKPD (.txt / Cetak)
+                    </button>
+                </div>
+
+            </div>
+        </div>
+
+        <!-- ================= TAB 3: KUIS & EVALUASI ================= -->
+        <div id="tab-kuis" class="hidden max-w-3xl mx-auto space-y-6">
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-6 shadow-xl space-y-6">
+                <div class="border-b border-slate-800 pb-4 flex justify-between items-center">
+                    <div>
+                        <div class="inline-block bg-purple-500/10 text-purple-400 text-xs font-semibold px-2.5 py-1 rounded-md mb-1">EVALUASI PEMAHAMAN</div>
+                        <h2 class="text-xl font-bold text-white">Kuis Pilihan Ganda Asas Kontinuitas</h2>
+                    </div>
+                    <div id="quizScoreBadge" class="hidden bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 px-3 py-1.5 rounded-xl text-sm font-bold">
+                        Skor: <span id="finalScore">0</span>/100
+                    </div>
+                </div>
+
+                <!-- Form Kuis -->
+                <div id="quizContainer" class="space-y-6">
+                    <!-- Soal 1 -->
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div class="text-xs font-bold text-blue-400">Soal 1 dari 3</div>
+                        <p class="text-sm text-slate-200 font-medium">Sebuah pipa air memiliki penampang besar dengan luas $4\text{ cm}^2$ dan kecepatan air $2\text{ m/s}$. Jika pipa menyempit menjadi $1\text{ cm}^2$, berapakah kecepatan air pada penampang kecil?</p>
+                        <div class="space-y-2 text-xs">
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q1" value="A" class="accent-blue-500">
+                                <span>A. $2\text{ m/s}$</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q1" value="B" class="accent-blue-500">
+                                <span>B. $4\text{ m/s}$</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q1" value="C" class="accent-blue-500">
+                                <span>C. $8\text{ m/s}$</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q1" value="D" class="accent-blue-500">
+                                <span>D. $16\text{ m/s}$</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Soal 2 -->
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div class="text-xs font-bold text-blue-400">Soal 2 dari 3</div>
+                        <p class="text-sm text-slate-200 font-medium">Besaran fisik apakah yang bernilai tetap atau konstan pada setiap titik di sepanjang pipa aliran fluida ideal dalam Asas Kontinuitas?</p>
+                        <div class="space-y-2 text-xs">
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q2" value="A" class="accent-blue-500">
+                                <span>A. Kecepatan aliran ($v$)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q2" value="B" class="accent-blue-500">
+                                <span>B. Luas penampang ($A$)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q2" value="C" class="accent-blue-500">
+                                <span>C. Debit aliran ($Q$)</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q2" value="D" class="accent-blue-500">
+                                <span>D. Tekanan fluida ($P$)</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Soal 3 -->
+                    <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 space-y-3">
+                        <div class="text-xs font-bold text-blue-400">Soal 3 dari 3</div>
+                        <p class="text-sm text-slate-200 font-medium">Jika jari-jari sebuah pipa diperbesar menjadi 2 kali lipat dari semula, bagaimana pengaruhnya terhadap kecepatan aliran fluida jika debitnya tetap?</p>
+                        <div class="space-y-2 text-xs">
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q3" value="A" class="accent-blue-500">
+                                <span>A. Kecepatan menjadi 4 kali lipat semula</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q3" value="B" class="accent-blue-500">
+                                <span>B. Kecepatan menjadi 2 kali lipat semula</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q3" value="C" class="accent-blue-500">
+                                <span>C. Kecepatan menjadi seperempat ($1/4$) kali semula</span>
+                            </label>
+                            <label class="flex items-center space-x-3 p-2.5 bg-slate-900 border border-slate-800 rounded-lg cursor-pointer hover:border-slate-700">
+                                <input type="radio" name="q3" value="D" class="accent-blue-500">
+                                <span>D. Kecepatan menjadi setengah ($1/2$) kali semula</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="pt-2 flex justify-end">
+                        <button onclick="submitKuis()" class="bg-purple-600 hover:bg-purple-500 text-white text-sm font-semibold px-6 py-2.5 rounded-xl flex items-center shadow-lg shadow-purple-600/30 transition">
+                            <i class="fa-solid fa-paper-plane mr-2"></i> Periksa Jawaban Kuis
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        let currentTab = 'simulasi';
+        let isRunning = false;
+        let animationId = null;
+
+        // Parameter Fisika
+        let d1 = 2.0; // meter
+        let v1 = 2.0; // m/s
+        let d2 = 1.0; // meter
+        let particleCount = 40;
+
+        let particles = [];
+        let dataLKPD = [];
+
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Input Elements
+        const rangeD1 = document.getElementById('rangeD1');
+        const rangeV1 = document.getElementById('rangeV1');
+        const rangeD2 = document.getElementById('rangeD2');
+        const rangeParticles = document.getElementById('rangeParticles');
+
+        const valD1 = document.getElementById('valD1');
+        const valV1 = document.getElementById('valV1');
+        const valD2 = document.getElementById('valD2');
+        const valParticles = document.getElementById('valParticles');
+
+        const readQ = document.getElementById('readQ');
+        const readV2 = document.getElementById('readV2');
+        const readRasio = document.getElementById('readRasio');
+
+        function switchTab(tab) {
+            currentTab = tab;
+            ['simulasi', 'lkpd', 'kuis'].forEach(t => {
+                document.getElementById(`tab-${t}`).classList.add('hidden');
+                document.getElementById(`btn-${t}`).className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all text-slate-400 hover:text-white";
+            });
+            document.getElementById(`tab-${tab}`).classList.remove('hidden');
+            const activeBtn = document.getElementById(`btn-${tab}`);
+            activeBtn.className = "px-4 py-1.5 rounded-lg text-sm font-medium transition-all bg-blue-600 text-white shadow";
+            
+            if(tab === 'simulasi') {
+                resizeCanvas();
+            }
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight || 300;
+        }
+
+        window.addEventListener('resize', () => {
+            if(currentTab === 'simulasi') resizeCanvas();
+        });
+
+        // Partikel Tracer
+        class Particle {
+            constructor() {
+                this.reset(true);
+            }
+            reset(randomX = false) {
+                this.x = randomX ? Math.random() * canvas.width : 0;
+                this.y = canvas.height / 2 + (Math.random() - 0.5) * (d1 * 25);
+                this.size = 3 + Math.random() * 2;
+                this.color = `rgba(56, 189, 248, ${0.6 + Math.random() * 0.4})`;
+            }
+            update() {
+                const w = canvas.width;
+                const h = canvas.height;
+                const midX = w / 2;
+                
+                // Zona pipa 1 (kiri), transisi (tengah), pipa 2 (kanan)
+                let currentV = v1;
+                if(this.x > midX - 100 && this.x < midX + 100) {
+                    // Transisi
+                    const A1 = Math.PI * Math.pow(d1/2, 2);
+                    const A2 = Math.PI * Math.pow(d2/2, 2);
+                    const v2Calc = (A1 * v1) / A2;
+                    currentV = v1 + (v2Calc - v1) * ((this.x - (midX - 100)) / 200);
+                } else if(this.x >= midX + 100) {
+                    const A1 = Math.PI * Math.pow(d1/2, 2);
+                    const A2 = Math.PI * Math.pow(d2/2, 2);
+                    currentV = (A1 * v1) / A2;
+                }
+
+                this.x += currentV * 1.5;
+
+                // Batas vertikal pipa
+                const radiusPipa = this.x < midX ? (d1 * 25) / 2 : (d2 * 25) / 2;
+                const centerY = h / 2;
+                
+                if(this.y < centerY - radiusPipa) this.y = centerY - radiusPipa + 2;
+                if(this.y > centerY + radiusPipa) this.y = centerY + radiusPipa - 2;
+
+                if (this.x > w) {
+                    this.reset(false);
+                }
+            }
+            draw() {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, this.size, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function initParticles() {
+            particles = [];
+            for(let i=0; i<particleCount; i++) {
+                particles.push(new Particle());
+            }
+        }
+
+        function hitungFisika() {
+            d1 = parseFloat(rangeD1.value);
+            v1 = parseFloat(rangeV1.value);
+            d2 = parseFloat(rangeD2.value);
+            particleCount = parseInt(rangeParticles.value);
+
+            valD1.innerText = d1.toFixed(1) + ' m';
+            valV1.innerText = v1.toFixed(1) + ' m/s';
+            valD2.innerText = d2.toFixed(1) + ' m';
+            valParticles.innerText = particleCount;
+
+            const A1 = Math.PI * Math.pow(d1 / 2, 2);
+            const A2 = Math.PI * Math.pow(d2 / 2, 2);
+            const Q1 = A1 * v1;
+            const v2 = Q1 / A2;
+            const rasio = A1 / A2;
+
+            readQ.innerHTML = Q1.toFixed(2) + ' <span class="text-xs font-normal">m³/s</span>';
+            readV2.innerHTML = v2.toFixed(2) + ' <span class="text-xs font-normal">m/s</span>';
+            readRasio.innerText = rasio.toFixed(2);
+
+            if(particles.length !== particleCount) {
+                initParticles();
+            }
+        }
+
+        // Event listeners input
+        [rangeD1, rangeV1, rangeD2, rangeParticles].forEach(input => {
+            input.addEventListener('input', hitungFisika);
+        });
+
+        function drawPipa() {
+            const w = canvas.width;
+            const h = canvas.height;
+            const centerY = h / 2;
+            const r1 = (d1 * 25);
+            const r2 = (d2 * 25);
+            const midX = w / 2;
+
+            // Gambar dinding pipa atas & bawah
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.9)';
+            ctx.strokeStyle = 'rgba(59, 130, 246, 0.6)';
+            ctx.lineWidth = 3;
+
+            // Pipa 1 (Kiri)
+            ctx.fillRect(0, centerY - r1 - 20, midX - 100, r1 * 2 + 40);
+            
+            // Transisi Menyimpat
+            ctx.beginPath();
+            ctx.moveTo(midX - 100, centerY - r1 - 20);
+            ctx.lineTo(midX + 100, centerY - r2 - 20);
+            ctx.lineTo(midX + 100, centerY + r2 + 20);
+            ctx.lineTo(midX - 100, centerY + r1 + 20);
+            ctx.closePath();
+            ctx.fillStyle = 'rgba(30, 41, 59, 0.8)';
+            ctx.fill();
+            ctx.stroke();
+
+            // Pipa 2 (Kanan)
+            ctx.fillRect(midX + 100, centerY - r2 - 20, w - (midX + 100), r2 * 2 + 40);
+
+            // Garis pembatas atas dan bawah luar
+            ctx.beginPath();
+            // Atas
+            ctx.moveTo(0, centerY - r1 - 20);
+            ctx.lineTo(midX - 100, centerY - r1 - 20);
+            ctx.lineTo(midX + 100, centerY - r2 - 20);
+            ctx.lineTo(w, centerY - r2 - 20);
+            // Bawah
+            ctx.moveTo(0, centerY + r1 + 20);
+            ctx.lineTo(midX - 100, centerY + r1 + 20);
+            ctx.lineTo(midX + 100, centerY + r2 + 20);
+            ctx.lineTo(w, centerY + r2 + 20);
+            ctx.stroke();
+        }
+
+        function animate() {
+            if(!isRunning) return;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawPipa();
+
+            particles.forEach(p => {
+                p.update();
+                p.draw();
+            });
+
+            animationId = requestAnimationFrame(animate);
+        }
+
+        function toggleSimulation() {
+            isRunning = !isRunning;
+            const btn = document.getElementById('playBtn');
+            const txt = document.getElementById('playText');
+            if(isRunning) {
+                btn.className = "bg-amber-600 hover:bg-amber-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center shadow transition";
+                txt.innerText = "Jeda";
+                animate();
+            } else {
+                btn.className = "bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center shadow transition";
+                txt.innerText = "Mulai";
+                cancelAnimationFrame(animationId);
+            }
+        }
+
+        function resetSimulation() {
+            isRunning = false;
+            cancelAnimationFrame(animationId);
+            document.getElementById('playBtn').className = "bg-emerald-600 hover:bg-emerald-500 text-white px-3.5 py-1.5 rounded-lg text-xs font-semibold flex items-center shadow transition";
+            document.getElementById('playText').innerText = "Mulai";
+            rangeD1.value = 2.0;
+            rangeV1.value = 2.0;
+            rangeD2.value = 1.0;
+            rangeParticles.value = 40;
+            hitungFisika();
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            drawPipa();
+        }
+
+        // LKPD Functions
+        function catatDataLKPD() {
+            const A1 = Math.PI * Math.pow(d1 / 2, 2);
+            const A2 = Math.PI * Math.pow(d2 / 2, 2);
+            const Q1 = A1 * v1;
+            const v2 = Q1 / A2;
+            const Q2 = A2 * v2;
+
+            dataLKPD.push({
+                d1: d1.toFixed(1),
+                v1: v1.toFixed(1),
+                d2: d2.toFixed(1),
+                v2: v2.toFixed(2),
+                q1: Q1.toFixed(2),
+                q2: Q2.toFixed(2)
+            });
+
+            renderTabelLKPD();
+            switchTab('lkpd');
+            alertCustom("Data berhasil dicatat ke LKPD!");
+        }
+
+        function renderTabelLKPD() {
+            const tbody = document.getElementById('tabelDataBody');
+            if(dataLKPD.length === 0) {
+                tbody.innerHTML = `<tr class="text-slate-500 italic"><td colspan="7" class="p-4 text-center">Belum ada data dicatat. Silakan gunakan tombol "Catat ke LKPD" di tab Simulasi.</td></tr>`;
+                return;
+            }
+            let html = '';
+            dataLKPD.forEach((row, idx) => {
+                html += `<tr class="border-b border-slate-800/60 hover:bg-slate-900/50">
+                    <td class="p-3 font-semibold text-blue-400">${idx + 1}</td>
+                    <td class="p-3">${row.d1}</td>
+                    <td class="p-3">${row.v1}</td>
+                    <td class="p-3">${row.d2}</td>
+                    <td class="p-3 font-bold text-emerald-400">${row.v2}</td>
+                    <td class="p-3">${row.q1}</td>
+                    <td class="p-3">${row.q2}</td>
+                </tr>`;
+            });
+            tbody.innerHTML = html;
+        }
+
+        function clearTabelLKPD() {
+            dataLKPD = [];
+            renderTabelLKPD();
+        }
+
+        function exportLaporanLKPD() {
+            const nama = document.getElementById('namaSiswa').value || 'Tanpa Nama';
+            const kelas = document.getElementById('kelasSiswa').value || 'Tanpa Kelas';
+            const a1 = document.getElementById('ans1').value;
+            const a2 = document.getElementById('ans2').value;
+            const a3 = document.getElementById('ans3').value;
+
+            let report = `=========================================\n`;
+            report += `LAPORAN LKPD VIRTUAL: ASAS KONTINUITAS\n`;
+            report += `=========================================\n`;
+            report += `Nama Siswa : ${nama}\n`;
+            report += `Kelas      : ${kelas}\n\n`;
+            report += `--- DATA PENGAMATAN ---\n`;
+            dataLKPD.forEach((d, i) => {
+                report += `Percobaan ${i+1}: d1=${d.d1}m, v1=${d.v1}m/s | d2=${d.d2}m, v2=${d.v2}m/s | Q1=${d.q1}, Q2=${d.q2}\n`;
+            });
+            report += `\n--- JAWABAN ANALISIS ---\n`;
+            report += `1. Pengaruh penampang terhadap kecepatan:\n${a1}\n\n`;
+            report += `2. Kekekalan debit dan massa:\n${a2}\n\n`;
+            report += `3. Kesimpulan:\n${a3}\n`;
+            report += `=========================================\n`;
+
+            const blob = new Blob([report], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `LKPD_Kontinuitas_${nama.replace(/\s+/g, '_')}.txt`;
+            a.click();
+        }
+
+        function submitKuis() {
+            const q1 = document.querySelector('input[name="q1"]:checked');
+            const q2 = document.querySelector('input[name="q2"]:checked');
+            const q3 = document.querySelector('input[name="q3"]:checked');
+
+            let score = 0;
+            // Kunci jawaban: Q1: C (8 m/s), Q2: C (Debit aliran Q), Q3: D (Setengah kali semula karena r berbanding terbalik kuadrat / A proporsional r^2)
+            if(q1 && q1.value === 'C') score += 33.3;
+            if(q2 && q2.value === 'C') score += 33.3;
+            if(q3 && q3.value === 'D') score += 33.4;
+
+            const finalScore = Math.round(score);
+            document.getElementById('finalScore').innerText = finalScore;
+            document.getElementById('quizScoreBadge').classList.remove('hidden');
+            alertCustom(`Evaluasi selesai! Skor Anda: ${finalScore}/100`);
+        }
+
+        function alertCustom(msg) {
+            // custom non-blocking alert notification
+            const notif = document.createElement('div');
+            notif.className = 'fixed bottom-5 right-5 bg-blue-600 text-white px-4 py-3 rounded-xl shadow-2xl z-50 text-xs font-semibold flex items-center space-x-2 animate-bounce';
+            notif.innerHTML = `<i class="fa-solid fa-circle-info text-base"></i><span>${msg}</span>`;
+            document.body.appendChild(notif);
+            setTimeout(() => notif.remove(), 3000);
+        }
+
+        // Inisialisasi awal
+        window.onload = function() {
+            hitungFisika();
+            resizeCanvas();
+            drawPipa();
+        }
+    </script>
+</body>
+</html>
